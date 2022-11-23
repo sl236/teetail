@@ -31,9 +31,9 @@ int usage() {
         "Arguments below are optional.\n"
         "-B block_size  teetail attempts to perform IO in block_size chunks.\n"
         "-P             if supplied, teetail tracks current progress\n"
-        "               on standard output instead of echoing standard input.\n"
+        "               on standard error.\n"
         "-q             if supplied, teetail is quiet - *nothing* is echoed\n"
-        "               to stdout. This overrides any other related options.\n"
+        "               to stdout.\n"
         "\n"
         "e.g.\nteetail -o last_log -c 1024\n"
     );
@@ -47,7 +47,10 @@ millisecond_t current_time_millis(void) {
     return (((millisecond_t)tv.tv_sec)*1000)+(tv.tv_usec/1000);
 }
 
+typedef long long unsigned int byte_size_t;
+
 int main( int argc, char **argv ) {
+    byte_size_t requested_size = 0;
     size_t block_size = 1024*1024;
     size_t buffer_size = 0;
     char const *destfilename = NULL;
@@ -77,7 +80,12 @@ int main( int argc, char **argv ) {
             case 'c':
                 if( ++arg >= argc )
                     return usage();
-                buffer_size = atoll(argv[arg]);
+                requested_size = atoll(argv[arg]);
+                buffer_size = (size_t)requested_size; 
+                if( buffer_size != requested_size ) {
+                    fprintf(stderr, "buffer size doesn't fit in size_t!");
+                    return -1;
+                }
                 break;
 
             case 'q':
@@ -91,7 +99,12 @@ int main( int argc, char **argv ) {
             case 'B':
                 if( ++arg >= argc )
                     return usage();
-                block_size=atoll(argv[arg]);
+                requested_size = atoll(argv[arg]);
+                block_size = (size_t)requested_size; 
+                if( block_size != requested_size ) {
+                    fprintf(stderr, "block size doesn't fit in size_t!");
+                    return -1;
+                }
                 break;
 
             default:
@@ -112,12 +125,13 @@ int main( int argc, char **argv ) {
         return -1;
     }
 
-    size_t total = 0;
+    byte_size_t total = 0;
 
     if( progress && !quiet ) {
-        fprintf(stdout, "\n");
+        fprintf(stderr, "\n");
     }
 
+    int return_code = 0;
     for(;;) {
         size_t const head = total % buffer_size;
         size_t const available_space = buffer_size - head;
@@ -126,37 +140,37 @@ int main( int argc, char **argv ) {
         size_t const bytes_read = fread( &buffer[head], sizeof(char), bytes_to_read, stdin );
         total += bytes_read;
 
+        if(progress) {
+            millisecond_t ptime = current_time_millis();
+            if( (ptime - last_ptime) > 250 )
+            {
+                char const * unit = "bytes";
+                byte_size_t displayed_total = total;
+                if( displayed_total > 1024 ) {
+                    unit = "Kb";
+                    displayed_total = displayed_total/1024;
+                }
+                if( displayed_total > 1024 ) {
+                    unit = "Mb";
+                    displayed_total = displayed_total/1024;
+                }
+                if( displayed_total > 1024 ) {
+                    unit = "Gb";
+                    displayed_total = displayed_total/1024;
+                }
+                double rate = displayed_total / ((ptime - start_ptime)/1000.0);
+                fprintf( stderr, "\r%llu %s read, %6.2f %s/s          ", displayed_total, unit, rate, unit );
+                fflush( stderr );
+                last_ptime = ptime;
+            }
+        }
+
         if( !quiet ) {
-            if(progress) {
-                millisecond_t ptime = current_time_millis();
-                if( (ptime - last_ptime) > 250 )
-                {
-                    char const * unit = "bytes";
-                    size_t displayed_total = total;
-                    if( displayed_total > 1024 ) {
-                        unit = "Kb";
-                        displayed_total = displayed_total/1024;
-                    }
-                    if( displayed_total > 1024 ) {
-                        unit = "Mb";
-                        displayed_total = displayed_total/1024;
-                    }
-                    if( displayed_total > 1024 ) {
-                        unit = "Gb";
-                        displayed_total = displayed_total/1024;
-                    }
-                    double rate = displayed_total / ((ptime - start_ptime)/1000.0);
-                    fprintf(stdout, "\r%zu %s read, %6.2f %s/s          ", displayed_total, unit, rate, unit);
-                    fflush( stdout );
-                    last_ptime = ptime;
-                }
-            } else {
-                size_t const bytes_written = fwrite( &buffer[head], sizeof(char), bytes_read, stdout );
-                if( bytes_written < bytes_read ) {
-                    fprintf(stderr, "error writing to stdout\n");
-                    break;
-                }
-                fflush( stdout );
+            size_t const bytes_written = fwrite( &buffer[head], sizeof(char), bytes_read, stdout );
+            if( ( bytes_written < bytes_read ) || fflush( stdout ) ) {
+                fprintf(stderr, "error writing to stdout\n");
+                return_code = -1;
+                break;
             }
         }
 
@@ -177,7 +191,12 @@ int main( int argc, char **argv ) {
     } else {
         fwrite( &buffer[0], sizeof(char), total, destfile );
     }
+    fflush( destfile );
+    if( ferror( destfile ) ) {
+        fprintf(stderr, "error writing to %s\n", destfilename);
+        return -1;
+    }
     fclose( destfile );
 
-    return 0;
+    return return_code;
 }
