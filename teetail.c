@@ -176,6 +176,12 @@ int main( int argc, char **argv ) {
 
         if( feof(stdin) )
             break;
+
+        if( ferror(stdin) ) {
+            fprintf(stderr, "error reading from stdin\n");
+            return_code = -1;
+            break;
+        }
     }
 
     FILE * destfile = fopen(destfilename, "wb");
