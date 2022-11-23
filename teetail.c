@@ -22,7 +22,7 @@ int usage() {
     fprintf(stderr, 
         "tee standard input to standard output and a file, but limit file size\n"
         "\n"
-        "Usage: teetail -o filename -s buffer_size [-Pq] [-B block_size]\n"
+        "Usage: teetail -o filename -c buffer_size [-Pq] [-B block_size]\n"
         "\n"
         "teetail duplicates standard input to standard output\n"
         "and also writes the last buffer_size bytes to the named file\n"
@@ -35,7 +35,7 @@ int usage() {
         "-q             if supplied, teetail is quiet - *nothing* is echoed\n"
         "               to stdout. This overrides any other related options.\n"
         "\n"
-        "e.g.\nteetail -o last_log -s 1024\n"
+        "e.g.\nteetail -o last_log -c 1024\n"
     );
     return -1;
 }
@@ -74,7 +74,7 @@ int main( int argc, char **argv ) {
                 destfilename = argv[arg];
                 break;
 
-            case 's':
+            case 'c':
                 if( ++arg >= argc )
                     return usage();
                 buffer_size = atoll(argv[arg]);

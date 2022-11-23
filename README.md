@@ -10,7 +10,9 @@ You have a job producing gigabytes of output. You want to watch it scroll by on 
 
 ## how?
 
-*some pipeline* `| teetail -o log -s 1048576 |` *more pipeline*
+*some pipeline* `| teetail -o log -c 1048576 |` *more pipeline*
+
+There are some configuration options, `teetail` with no arguments to see them.
 
 ## compile
 
