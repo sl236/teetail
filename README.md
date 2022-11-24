@@ -1,5 +1,7 @@
 # teetail
 
+[![.github/workflows/main.yml](https://github.com/sl236/teetail/actions/workflows/main.yml/badge.svg)](https://github.com/sl236/teetail/actions/workflows/main.yml)
+
 ## what?
 
 `teetail` is like `tee` - it echoes its standard input to standard output and also to a file; but also like `tail` - no more than the number of bytes specified on the command line are placed in the file, and these are the tail of the dataset passing through `teetail`.
