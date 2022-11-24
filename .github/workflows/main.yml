@@ -12,14 +12,19 @@ jobs:
     name: build and test
     runs-on: ubuntu-latest
     steps:
-      - name: build and test
-        run: |
-          gcc -Wall -Wextra -Werror teetail.c -o teetail
-          echo -n "0123456789abcdef" | ./teetail -o test -c 10 | grep -q "^0123456789abcdef$"
-          grep -q "^6789abcdef$" test
-          echo -n "0123456789abcdef" | ./teetail -o test -c 10 -B 1 | grep -q "^0123456789abcdef$"
-          grep -q "^6789abcdef$" test
-          echo -n "0123456789abcdef" | ./teetail -o test -c 10 -B 1 >/dev/full 2>err
-          grep -q stdout err
-          echo -n "0123456789abcdef" | ./teetail -o /dev/full -c 10 -B 1 >/dev/null 2>err
-          grep -q /dev/full err
+        - name: checkout
+          uses: "actions/checkout@v3"
+          with:
+           path: "teetail"
+        - name: build and test
+          run: |
+           cd teetail
+           gcc -Wall -Wextra -Werror teetail.c -o teetail
+           echo -n "0123456789abcdef" | ./teetail -o test -c 10 | grep -q "^0123456789abcdef$"
+           grep -q "^6789abcdef$" test
+           echo -n "0123456789abcdef" | ./teetail -o test -c 10 -B 1 | grep -q "^0123456789abcdef$"
+           grep -q "^6789abcdef$" test
+           echo -n "0123456789abcdef" | ./teetail -o test -c 10 -B 1 >/dev/full 2>err
+           grep -q stdout err
+           echo -n "0123456789abcdef" | ./teetail -o /dev/full -c 10 -B 1 >/dev/null 2>err
+           grep -q /dev/full err
